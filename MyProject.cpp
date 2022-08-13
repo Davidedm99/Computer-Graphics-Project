@@ -170,15 +170,17 @@ class MyProject : public BaseProject {
 	// Very likely this will be where you will be writing the logic of your application.
 	void updateUniformBuffer(uint32_t currentImage) {
 		static auto startTime = std::chrono::high_resolution_clock::now();
+		static float lastTime = 0.0f;
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration<float, std::chrono::seconds::period>
 					(currentTime - startTime).count();
+		float deltaT = time - lastTime;
 					
 		GlobalUniformBufferObject gubo{};
 		UniformBufferObject ubo{};
 		void* data;
 
-		gubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+		gubo.view = glm::lookAt(glm::vec3(5.0f, 2.0f, 2.0f),
 							   glm::vec3(0.0f, 0.0f, 0.0f),
 							   glm::vec3(0.0f, 0.0f, 1.0f));
 		gubo.proj = glm::perspective(glm::radians(45.0f),
@@ -187,7 +189,7 @@ class MyProject : public BaseProject {
 		gubo.proj[1][1] *= -1;
 	
 
-		//global shader
+		//Global shader
 		vkMapMemory(device, DS_Global.uniformBuffersMemory[0][currentImage], 0,
 							sizeof(gubo), 0, &data);
 		memcpy(data, &gubo, sizeof(gubo));
@@ -201,7 +203,10 @@ class MyProject : public BaseProject {
 		vkUnmapMemory(device, DS_Rocket.uniformBuffersMemory[0][currentImage]);
 
 		//Landscape positioning
-		ubo.model = glm::mat4(1.0f) ;
+		glm::mat4 rot, trans;
+		rot = rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		trans = translate(glm::mat4(1.0f), glm::vec3(-3, 0, -2));
+		ubo.model = trans * rot;
 		vkMapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage], 0,
 							sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
