@@ -27,5 +27,8 @@
   <ItemGroup>
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
+    <None Include="shaders\compile.bat">
+      <Filter>File di origine</Filter>
+    </None>
   </ItemGroup>
 </Project>

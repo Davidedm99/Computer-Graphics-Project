@@ -153,6 +153,7 @@
     <ClInclude Include="MyProject.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\compile.bat" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
   </ItemGroup>
