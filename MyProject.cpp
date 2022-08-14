@@ -175,19 +175,93 @@ class MyProject : public BaseProject {
 		float time = std::chrono::duration<float, std::chrono::seconds::period>
 					(currentTime - startTime).count();
 		float deltaT = time - lastTime;
+
 					
 		GlobalUniformBufferObject gubo{};
 		UniformBufferObject ubo{};
 		void* data;
 
-		gubo.view = glm::lookAt(glm::vec3(5.0f, 2.0f, 2.0f),
-							   glm::vec3(0.0f, 0.0f, 0.0f),
-							   glm::vec3(0.0f, 0.0f, 1.0f));
+
+		// camera
+		static glm::mat3 CamDir = glm::mat3(1);
+		static glm::vec3 CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
+
+
+		// rotation through mouse
+		float cameraRotSpeed = 0.005f;
+
+		// for unlimited movement in the window
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+		if (glfwRawMouseMotionSupported())
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
+		static double oldxpos = 0, oldypos = 0;
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		if (lastTime == 0.0f) {
+			oldxpos = xpos;
+			oldypos = ypos;
+		}
+
+		lastTime = time;
+
+		glm::vec2 mouseMovement = glm::vec2(xpos - oldxpos, ypos - oldypos);
+
+		CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.x * cameraRotSpeed, glm::vec3(0, 1, 0))) * glm::mat4(CamDir));
+		CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.y * cameraRotSpeed, glm::vec3(CamDir[0]))) * glm::mat4(CamDir));
+
+		oldxpos = xpos;
+		oldypos = ypos;
+
+		// camera movement
+		static glm::vec3 cameraPos = glm::vec3(0, 0, 0);
+		float cameraSpeed = 0.5f; // units/second
+		float cameraDelta = cameraSpeed * deltaT;
+		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
+			cameraSpeed *= 3;
+		}
+		if (glfwGetKey(window, GLFW_KEY_A)) {
+			CamPos -= cameraSpeed * glm::vec3(CamDir[0]) * deltaT;
+		}
+		if (glfwGetKey(window, GLFW_KEY_D)) {
+			CamPos += cameraSpeed * glm::vec3(CamDir[0]) * deltaT;
+		}
+		if (glfwGetKey(window, GLFW_KEY_S)) {
+			CamPos += cameraSpeed * glm::vec3(CamDir[2]) * deltaT;
+		}
+		if (glfwGetKey(window, GLFW_KEY_W)) {
+			CamPos -= cameraSpeed * glm::vec3(CamDir[2]) * deltaT;
+		}
+		if (glfwGetKey(window, GLFW_KEY_C)) {
+			CamPos -= cameraSpeed * glm::vec3(CamDir[1]) * deltaT;
+		}
+		if (glfwGetKey(window, GLFW_KEY_SPACE)) {
+			CamPos += cameraSpeed * glm::vec3(CamDir[1]) * deltaT;
+		}
+
+
+		gubo.view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
 		gubo.proj = glm::perspective(glm::radians(45.0f),
 						swapChainExtent.width / (float) swapChainExtent.height,
 						0.1f, 10.0f);
 		gubo.proj[1][1] *= -1;
-	
+
+
+		// rocket movement test
+		static glm::vec3 rocketPos = glm::vec3(0, 0, 0);
+		static bool launched = false;
+
+		if (glfwGetKey(window, GLFW_KEY_ENTER)) {
+			launched = true;
+		}
+
+		if (launched) {
+			float rocketSpeed = 0.6f; // units/second
+			float rocketDelta = rocketSpeed * deltaT;
+			rocketPos += (glm::vec3(0, rocketDelta, 0));
+		}		
+
 
 		//Global shader
 		vkMapMemory(device, DS_Global.uniformBuffersMemory[0][currentImage], 0,
@@ -196,7 +270,11 @@ class MyProject : public BaseProject {
 		vkUnmapMemory(device, DS_Global.uniformBuffersMemory[0][currentImage]);
 
 		// Rocket body
-		ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f,0.3f, 0.3f));
+		// rocket center position (0,0,4.1085)
+		ubo.model = glm::translate(glm::mat4(1), rocketPos)
+					* glm::translate(glm::mat4(1), glm::vec3(0, 4.1085 * 0.3, 0))
+					* glm::rotate(glm::mat4(1), -glm::radians(90.0f), glm::vec3(1, 0, 0))
+					* glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
 		vkMapMemory(device, DS_Rocket.uniformBuffersMemory[0][currentImage], 0,
 							sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
@@ -206,7 +284,7 @@ class MyProject : public BaseProject {
 		glm::mat4 rot, trans;
 		rot = rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		trans = translate(glm::mat4(1.0f), glm::vec3(-3, 0, -2));
-		ubo.model = trans * rot;
+		ubo.model = trans;
 		vkMapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage], 0,
 							sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
