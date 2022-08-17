@@ -4,6 +4,10 @@
 #define GLM_FORCE_RADIANS
 #define FLM_FORCE_DEPTH_ZERO_TO_ONE
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+
 
 // The uniform buffer object 
 
@@ -183,12 +187,12 @@ class MyProject : public BaseProject {
 
 
 		// camera
-		static glm::mat3 CamDir = glm::mat3(1);
-		static glm::vec3 CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
+		static glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(30.0f), glm::vec3(1, 0, 0))) * glm::mat3(1);
+		static glm::vec3 CamPos = glm::vec3(0.0f, 9.0f, 9.0f);
 
 
 		// rotation through mouse
-		float cameraRotSpeed = 0.005f;
+		float cameraRotSpeed = 0.003f;
 
 		// for unlimited movement in the window
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -216,50 +220,97 @@ class MyProject : public BaseProject {
 
 		// camera movement
 		static glm::vec3 cameraPos = glm::vec3(0, 0, 0);
-		float cameraSpeed = 0.5f; // units/second
-		float cameraDelta = cameraSpeed * deltaT;
+		float cameraSpeed = 0.9f; // units/second
+		float yCameraSpeed = 2.0f;
 		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
-			cameraSpeed *= 3;
+			cameraSpeed *= 3.5;
+			yCameraSpeed *= 3.5;
 		}
 		if (glfwGetKey(window, GLFW_KEY_A)) {
-			CamPos -= cameraSpeed * glm::vec3(CamDir[0]) * deltaT;
+			CamPos -= cameraSpeed * deltaT * glm::vec3(CamDir[0]);
 		}
 		if (glfwGetKey(window, GLFW_KEY_D)) {
-			CamPos += cameraSpeed * glm::vec3(CamDir[0]) * deltaT;
+			CamPos += cameraSpeed * deltaT * glm::vec3(CamDir[0]);
 		}
 		if (glfwGetKey(window, GLFW_KEY_S)) {
-			CamPos += cameraSpeed * glm::vec3(CamDir[2]) * deltaT;
+			CamPos += cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_W)) {
-			CamPos -= cameraSpeed * glm::vec3(CamDir[2]) * deltaT;
+			CamPos -= cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_C)) {
-			CamPos -= cameraSpeed * glm::vec3(CamDir[1]) * deltaT;
+			CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 		if (glfwGetKey(window, GLFW_KEY_SPACE)) {
-			CamPos += cameraSpeed * glm::vec3(CamDir[1]) * deltaT;
+			CamPos += yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 
 
 		gubo.view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
 		gubo.proj = glm::perspective(glm::radians(45.0f),
 			swapChainExtent.width / (float)swapChainExtent.height,
-			0.1f, 10.0f);
+			0.1f, 40.0f);
 		gubo.proj[1][1] *= -1;
 
 
 		// rocket movement test
-		static glm::vec3 rocketPos = glm::vec3(0, 0, 0);
-		static bool launched = false;
+		glm::vec3 startPoint = glm::vec3(0, 4.1085 * 0.3, 0);
+		glm::vec3 destPoint = glm::vec3(5, 4.1085 * 0.3, 5);
+		glm::vec3 center = glm::vec3((destPoint.x + startPoint.x) / 2, std::max(startPoint.y, destPoint.y), (destPoint.z + startPoint.z) / 2);
+		float r = glm::sqrt(pow(destPoint.x - startPoint.x, 2) + pow(destPoint.z - startPoint.z, 2)) / 2;
 
+		static glm::vec3 rocketMov = glm::vec3(0);
+		glm::mat4 rocketRot = glm::mat4(1);
+
+		glm::vec3 diff = destPoint - startPoint;
+		float alpha = glm::atan(diff.z, diff.x);
+		static double beta = M_PI;
+
+		float maxSpeed = 15.0f;
+		float acceleration = 6.0f;
+		static float currentSpeed = 0.0f;
+
+		static bool launched = false;
+		static bool inputLimit = true;
 		if (glfwGetKey(window, GLFW_KEY_ENTER)) {
-			launched = true;
+			if (inputLimit) {
+				launched = true;
+				inputLimit = false;
+			}
 		}
 
 		if (launched) {
-			float rocketSpeed = 0.6f; // units/second
-			float rocketDelta = rocketSpeed * deltaT;
-			rocketPos += (glm::vec3(0, rocketDelta, 0));
+			float movDelta = currentSpeed * deltaT;
+			if (beta >= M_PI && startPoint.y + rocketMov.y + movDelta < destPoint.y) {
+				rocketMov += glm::vec3(0, movDelta, 0);
+			}
+			else if (beta <= 0 && startPoint.y + rocketMov.y - movDelta > destPoint.y) {
+				rocketMov -= glm::vec3(0, movDelta, 0);
+				rocketRot = glm::rotate(glm::mat4(1), (float)M_PI, glm::cross(glm::vec3(0, 1, 0), diff));
+			}
+			else {
+				rocketMov = glm::vec3(center.x + r * cos(beta) * cos(alpha),
+					center.y - startPoint.y + r * sin(beta),
+					center.z + r * cos(beta) * sin(alpha));
+				rocketRot = glm::rotate(glm::mat4(1), (float)(M_PI - beta), glm::cross(glm::vec3(0, 1, 0), diff));
+				beta -= 2 * asin(movDelta / (2 * r));
+			}
+
+			if (beta <= 0 && startPoint.y + rocketMov.y - movDelta <= destPoint.y) {
+				launched = false;
+			}
+			if (currentSpeed < maxSpeed) {
+				currentSpeed += acceleration * deltaT;
+			}
+		}
+
+
+		if (glfwGetKey(window, GLFW_KEY_R)) {
+			launched = false;
+			inputLimit = true;
+			currentSpeed = 0.0f;
+			rocketMov = glm::vec3(0);
+			beta = M_PI;
 		}
 
 
@@ -271,8 +322,9 @@ class MyProject : public BaseProject {
 
 		// Rocket body
 		// rocket center position (0,0,4.1085)
-		ubo.model = glm::translate(glm::mat4(1), rocketPos)
-			* glm::translate(glm::mat4(1), glm::vec3(0, 4.1085 * 0.3, 0))
+		ubo.model = glm::translate(glm::mat4(1), rocketMov)
+			* glm::translate(glm::mat4(1), startPoint)
+			* rocketRot
 			* glm::rotate(glm::mat4(1), -glm::radians(90.0f), glm::vec3(1, 0, 0))
 			* glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
 		vkMapMemory(device, DS_Rocket.uniformBuffersMemory[0][currentImage], 0,
@@ -281,10 +333,11 @@ class MyProject : public BaseProject {
 		vkUnmapMemory(device, DS_Rocket.uniformBuffersMemory[0][currentImage]);
 
 		//Landscape positioning
-		glm::mat4 rot, trans;
+		glm::mat4 rot, trans, scale;
 		rot = rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		trans = translate(glm::mat4(1.0f), glm::vec3(-3, 0, -2));
-		ubo.model = trans;
+		scale = glm::scale(glm::mat4(1), glm::vec3(3, 1, 3));
+		ubo.model = trans * scale;
 		vkMapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage], 0,
 			sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
