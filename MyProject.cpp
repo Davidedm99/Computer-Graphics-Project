@@ -22,8 +22,6 @@ struct UniformBufferObject {
 };
 
 
-
-
 // MAIN ! 
 class MyProject : public BaseProject {
 	protected:
@@ -170,24 +168,8 @@ class MyProject : public BaseProject {
 			static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
 	}
 
-	// Here is where you update the uniforms.
-	// Very likely this will be where you will be writing the logic of your application.
-	void updateUniformBuffer(uint32_t currentImage) {
-		static auto startTime = std::chrono::high_resolution_clock::now();
-		static float lastTime = 0.0f;
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float time = std::chrono::duration<float, std::chrono::seconds::period>
-			(currentTime - startTime).count();
-		float deltaT = time - lastTime;
-
-
-		GlobalUniformBufferObject gubo{};
-		UniformBufferObject ubo{};
-		void* data;
-
-
-		// camera
-		static glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(30.0f), glm::vec3(1, 0, 0))) * glm::mat3(1);
+	void firstPersonCamera(GlobalUniformBufferObject *gubo, UniformBufferObject *ubo, float lastTime, float deltaT) {
+		static glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(30.0f), glm::vec3(1, 0, 0)));
 		static glm::vec3 CamPos = glm::vec3(0.0f, 9.0f, 9.0f);
 
 
@@ -196,19 +178,17 @@ class MyProject : public BaseProject {
 
 		// for unlimited movement in the window
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
+		// raw mouse input (no acceleration frmo the OS)
 		if (glfwRawMouseMotionSupported())
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
 		static double oldxpos = 0, oldypos = 0;
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
-		if (lastTime == 0.0f) {
+		if (lastTime - deltaT == 0.0f) {
 			oldxpos = xpos;
 			oldypos = ypos;
 		}
-
-		lastTime = time;
 
 		glm::vec2 mouseMovement = glm::vec2(xpos - oldxpos, ypos - oldypos);
 
@@ -246,36 +226,95 @@ class MyProject : public BaseProject {
 		}
 
 
-		gubo.view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
-		gubo.proj = glm::perspective(glm::radians(45.0f),
+		gubo->view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
+		gubo->proj = glm::perspective(glm::radians(45.0f),
 			swapChainExtent.width / (float)swapChainExtent.height,
 			0.1f, 40.0f);
-		gubo.proj[1][1] *= -1;
+		gubo->proj[1][1] *= -1;
+	}
+
+	void fromAboveCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo) {
+		static glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(90.0f), glm::vec3(1, 0, 0)));
+		static glm::vec3 CamPos = glm::vec3(0.0f, 35.0f, 0.0f);
+
+		gubo->view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
+		/*gubo->proj = glm::perspective(glm::radians(45.0f),
+			swapChainExtent.width / (float)swapChainExtent.height,
+			0.1f, 40.0f);*/
+		gubo->proj = glm::scale(glm::mat4(1), glm::vec3(1, -1, 1)) *
+			glm::ortho(CamPos.x - swapChainExtent.width / 40,
+				CamPos.x + swapChainExtent.width / 40,
+				CamPos.z + swapChainExtent.height / 40,
+				CamPos.z - swapChainExtent.height / 40,
+				0.1f, 40.0f);
+		gubo->proj[1][1] *= -1;
+	}
+
+	void rocketPOVCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo, glm::vec3 rocketPos, glm::mat4 rocketRot, glm::vec3 trajDir, double beta, float ellipticTrajectoryFactor) {
+		// position of the camera relative to the rocket center
+		float rotAngle = atan(ellipticTrajectoryFactor * cos(beta) / sin(beta)) + M_PI / 2;
+		glm::vec3 camRelativePos = glm::vec3(-trajDir.x * cos(rotAngle), sin(rotAngle), -trajDir.z * cos(rotAngle)) * 0.3f;
+		//std::cout << glm::degrees(beta) << " " << glm::degrees(rotAngle) << std::endl;
+		//std::cout << camRelativePos.x << " " << camRelativePos.y << " " << camRelativePos.z << " " << std::endl;
+		
+
+		glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(70.0f) + rotAngle, glm::cross(glm::vec3(0, 1, 0), trajDir)) *
+			glm::rotate(glm::mat4(1), (float) M_PI + glm::atan(trajDir.x, trajDir.z), glm::vec3(0, 1, 0)));
+		glm::vec3 CamPos = rocketPos + camRelativePos;
 
 
-		// rocket movement test
-		glm::vec3 startPoint = glm::vec3(0, 4.1085 * 0.3, 0);
-		glm::vec3 destPoint = glm::vec3(5, 4.1085 * 0.3, 5);
+		gubo->view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
+		gubo->proj = glm::perspective(glm::radians(45.0f),
+			swapChainExtent.width / (float)swapChainExtent.height,
+			0.1f, 40.0f);
+		gubo->proj[1][1] *= -1;
+	}
+
+
+	// Here is where you update the uniforms.
+	// Very likely this will be where you will be writing the logic of your application.
+	void updateUniformBuffer(uint32_t currentImage) {
+		static auto startTime = std::chrono::high_resolution_clock::now();
+		static float lastTime = 0.0f;
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>
+			(currentTime - startTime).count();
+		float deltaT = time - lastTime;
+		lastTime = time;
+
+
+		GlobalUniformBufferObject gubo{};
+		UniformBufferObject ubo{};
+		void* data;
+
+
+		// rocket
+		static float rocketResizeFactor = 0.18;
+		glm::vec3 startPoint = glm::vec3(-2, 4.1085 * rocketResizeFactor, 0);
+		glm::vec3 destPoint = glm::vec3(5, 4.1085 * rocketResizeFactor, 1);
+
+		// rocket movement
 		glm::vec3 center = glm::vec3((destPoint.x + startPoint.x) / 2, std::max(startPoint.y, destPoint.y), (destPoint.z + startPoint.z) / 2);
-		float r = glm::sqrt(pow(destPoint.x - startPoint.x, 2) + pow(destPoint.z - startPoint.z, 2)) / 2;
+		static float r = glm::sqrt(pow(destPoint.x - startPoint.x, 2) + pow(destPoint.z - startPoint.z, 2)) / 2;
 
 		static glm::vec3 rocketMov = glm::vec3(0);
 		glm::mat4 rocketRot = glm::mat4(1);
 
-		glm::vec3 diff = destPoint - startPoint;
+		glm::vec3 diff = glm::normalize(glm::vec3(destPoint.x - startPoint.x, 0, destPoint.z - startPoint.z));
 		float alpha = glm::atan(diff.z, diff.x);
 		static double beta = M_PI;
 
-		float maxSpeed = 15.0f;
-		float acceleration = 6.0f;
+		static float maxSpeed = 4.0f;
+		static float acceleration = 2.0f;
 		static float currentSpeed = 0.0f;
+		float ellipticTrajectoryFactor = 2.0f;
 
 		static bool launched = false;
-		static bool inputLimit = true;
+		static bool launchedInputLimit = true;
 		if (glfwGetKey(window, GLFW_KEY_ENTER)) {
-			if (inputLimit) {
+			if (launchedInputLimit) {
 				launched = true;
-				inputLimit = false;
+				launchedInputLimit = false;
 			}
 		}
 
@@ -289,10 +328,12 @@ class MyProject : public BaseProject {
 				rocketRot = glm::rotate(glm::mat4(1), (float)M_PI, glm::cross(glm::vec3(0, 1, 0), diff));
 			}
 			else {
-				rocketMov = glm::vec3(center.x + r * cos(beta) * cos(alpha),
-					center.y - startPoint.y + r * sin(beta),
-					center.z + r * cos(beta) * sin(alpha));
-				rocketRot = glm::rotate(glm::mat4(1), (float)(M_PI - beta), glm::cross(glm::vec3(0, 1, 0), diff));
+				rocketMov = glm::vec3(center.x - startPoint.x + r * cos(beta) * cos(alpha),
+					center.y - startPoint.y + r * ellipticTrajectoryFactor * sin(beta),
+					center.z - startPoint.z + r * cos(beta) * sin(alpha));
+				float rotAngle = atan(ellipticTrajectoryFactor * cos(beta) / sin(beta)) + M_PI / 2;
+				//std::cout << glm::degrees(beta) << " " << glm::degrees(rotAngle) << std::endl;
+				rocketRot = glm::rotate(glm::mat4(1), rotAngle, glm::cross(glm::vec3(0, 1, 0), diff));
 				beta -= 2 * asin(movDelta / (2 * r));
 			}
 
@@ -304,13 +345,43 @@ class MyProject : public BaseProject {
 			}
 		}
 
-
+		// reset rocket position
 		if (glfwGetKey(window, GLFW_KEY_R)) {
 			launched = false;
-			inputLimit = true;
+			launchedInputLimit = true;
 			currentSpeed = 0.0f;
 			rocketMov = glm::vec3(0);
 			beta = M_PI;
+		}
+
+
+		// camera
+		static int cameraType = 0;
+
+		float minInputDelay = 0.2f;
+		static float timer = minInputDelay;
+		timer += deltaT;
+		if (glfwGetKey(window, GLFW_KEY_M) && timer >= minInputDelay) {
+			cameraType = (cameraType + 1) % 3;
+			timer = 0.0f;
+		}
+
+		switch (cameraType) {
+		case 0:
+			firstPersonCamera(&gubo, &ubo, lastTime, deltaT);
+			break;
+		case 1:
+			fromAboveCamera(&gubo, &ubo);
+			break;
+		case 2:
+			rocketPOVCamera(&gubo, &ubo, startPoint + rocketMov, rocketRot, diff, beta, ellipticTrajectoryFactor);
+			//rocketPOVCamera(&gubo, &ubo, startPoint + rocketMov, rocketRot, glm::vec3(diff.x * cos(beta), sin(beta), diff.z * cos(beta)));
+			break;
+		}
+
+		// change destination point when camera is from above
+		if (cameraType == 2) {
+
 		}
 
 
@@ -321,12 +392,12 @@ class MyProject : public BaseProject {
 		vkUnmapMemory(device, DS_Global.uniformBuffersMemory[0][currentImage]);
 
 		// Rocket body
-		// rocket center position (0,0,4.1085)
+		// rocket center position (0,0,4.1085 * rocketResizeFactor)
 		ubo.model = glm::translate(glm::mat4(1), rocketMov)
 			* glm::translate(glm::mat4(1), startPoint)
 			* rocketRot
 			* glm::rotate(glm::mat4(1), -glm::radians(90.0f), glm::vec3(1, 0, 0))
-			* glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
+			* glm::scale(glm::mat4(1.0f), glm::vec3(rocketResizeFactor));
 		vkMapMemory(device, DS_Rocket.uniformBuffersMemory[0][currentImage], 0,
 			sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
