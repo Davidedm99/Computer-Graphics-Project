@@ -1,0 +1,33 @@
+﻿  MyProject.cpp
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(267,20): warning C4099: 'Model': il nome del tipo che in precedenza utilizzava 'struct' ora utilizza 'class'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(180): message : vedere la dichiarazione di 'Model'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(268,22): warning C4099: 'Texture': il nome del tipo che in precedenza utilizzava 'struct' ora utilizza 'class'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(197): message : vedere la dichiarazione di 'Texture'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(269,23): warning C4099: 'Pipeline': il nome del tipo che in precedenza utilizzava 'struct' ora utilizza 'class'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(229): message : vedere la dichiarazione di 'Pipeline'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(270,34): warning C4099: 'DescriptorSetLayout': il nome del tipo che in precedenza utilizzava 'struct' ora utilizza 'class'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(221): message : vedere la dichiarazione di 'DescriptorSetLayout'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(271,28): warning C4099: 'DescriptorSet': il nome del tipo che in precedenza utilizzava 'struct' ora utilizza 'class'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(250): message : vedere la dichiarazione di 'DescriptorSet'
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(1396,1): warning C4267: 'argomento': conversione da 'size_t' a 'int'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(1632,39): warning C4267: 'argomento': conversione da 'size_t' a '_Ty'. Possibile perdita di dati.
+          with
+          [
+              _Ty=unsigned int
+          ]
+C:\Users\Davide\Desktop\working rocket\MyProject.hpp(1958,48): warning C4267: '=': conversione da 'size_t' a 'uint32_t'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(366,18): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(402,1): warning C4305: 'inizializzazione': troncamento da 'double' a 'float'
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(408,11): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(443,20): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(493,46): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
+          with
+          [
+              T=float
+          ]
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(494,46): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
+          with
+          [
+              T=float
+          ]
+  working rocket.vcxproj -> C:\Users\Davide\Desktop\working rocket\x64\Debug\working rocket.exe
