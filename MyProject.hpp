@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <fstream>
 #include <array>
+#include <unordered_map>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
@@ -185,6 +186,8 @@ struct Model {
 	VkDeviceMemory vertexBufferMemory;
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
+	std::vector<std::pair<float, float>> xz;
+	std::vector<float> y;
 	
 	void loadModel(std::string file);
 	void createIndexBuffer();
@@ -192,6 +195,9 @@ struct Model {
 
 	void init(BaseProject *bp, std::string file);
 	void cleanup();
+
+	void fillVectorY(const glm::mat4& modelMatrix);
+	float findClosestPoint(float x, float z);
 };
 
 struct Texture {
@@ -1467,8 +1473,7 @@ protected:
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-		VkPipelineStageFlags waitStages[] =
-			{VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
@@ -1593,9 +1598,6 @@ protected:
 	}
 };
 
-
-
-
 void Model::loadModel(std::string file) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -1627,7 +1629,6 @@ void Model::loadModel(std::string file) {
 				attrib.normals[3 * index.normal_index + 1],
 				attrib.normals[3 * index.normal_index + 2]
 			};
-			
 			vertices.push_back(vertex);
 			indices.push_back(vertices.size()-1);
 		}
@@ -1673,15 +1674,39 @@ void Model::init(BaseProject *bp, std::string file) {
 }
 
 void Model::cleanup() {
-   	vkDestroyBuffer(BP->device, indexBuffer, nullptr);
+   	vkDestroyBuffer(BP->device, indexBuffer, nullptr);		//error during debug?
    	vkFreeMemory(BP->device, indexBufferMemory, nullptr);
 	vkDestroyBuffer(BP->device, vertexBuffer, nullptr);
    	vkFreeMemory(BP->device, vertexBufferMemory, nullptr);
 }
 
 
+void Model::fillVectorY(const glm::mat4& modelMatrix) {
+	for (auto vertex : vertices) {
+		glm::vec4 worldVertex = modelMatrix * glm::vec4{ vertex.pos.x, vertex.pos.y, vertex.pos.z, 1.0f };
+		xz.push_back({ worldVertex.x, worldVertex.z });
+		y.push_back(worldVertex.y);
+	}
+}
+
+float Model::findClosestPoint(float x, float z) {
+	float minDist = 100000;
+	float result = -3;
+
+	//non trova nulla
+	for (int i = 0; i < xz.size(); ++i) {
+		auto dist = sqrt((xz[i].first - x) * (xz[i].first - x) + (xz[i].second - z) * (xz[i].second - z));
+		if (dist < minDist) {
+			minDist = dist;
+			result = y[i];
+		}
+	}
+	return result;
+}
+
 
 void Texture::createCubicTextureImage() {
+	//width and height are not the same sicne the image is not a square
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels[6];
 	const std::string TEXTURE_PATH = "textures/";

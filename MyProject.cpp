@@ -6,6 +6,7 @@
 #include <math.h>
 
 float scalingFactor = 40.0f;
+float defaultPosX = 0, defaultPosY = 0;
 
 // The uniform buffer object 
 
@@ -118,25 +119,9 @@ class MyProject : public BaseProject {
 					{1, TEXTURE, 0, &Rocket_texture}
 				});
 
-		Landscape.init(this, "models/plane.obj");
-		Landscape_texture.init(this, "textures/sand.jpg");
+		Landscape.init(this, "models/plane4x.obj");
+		Landscape_texture.init(this, "textures/sand4x.png");
 		DS_Landscape.init(this, &DSLObject, {
-					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-					{1, TEXTURE, 0, &Landscape_texture}
-				});
-
-		Landscape2.init(this, "models/plane.obj");
-		DS_Landscape2.init(this, &DSLObject, {
-					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-					{1, TEXTURE, 0, &Landscape_texture}
-				});
-		Landscape3.init(this, "models/plane.obj");
-		DS_Landscape3.init(this, &DSLObject, {
-					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-					{1, TEXTURE, 0, &Landscape_texture}
-				});
-		Landscape4.init(this, "models/plane.obj");
-		DS_Landscape4.init(this, &DSLObject, {
 					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 					{1, TEXTURE, 0, &Landscape_texture}
 				});
@@ -229,42 +214,6 @@ class MyProject : public BaseProject {
 			0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
-
-		//Land2
-		VkBuffer vertexBuffers3[] = { Landscape2.vertexBuffer };
-		VkDeviceSize offsets3[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers3, offsets3);
-		vkCmdBindIndexBuffer(commandBuffer, Landscape2.indexBuffer, 0,
-			VK_INDEX_TYPE_UINT32);
-		vkCmdBindDescriptorSets(commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			P1.pipelineLayout, 1, 1, &DS_Landscape2.descriptorSets[currentImage],
-			0, nullptr);
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(Landscape2.indices.size()), 1, 0, 0, 0);
-
-		//Land3
-		VkBuffer vertexBuffers4[] = { Landscape3.vertexBuffer };
-		VkDeviceSize offsets4[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers4, offsets4);
-		vkCmdBindIndexBuffer(commandBuffer, Landscape3.indexBuffer, 0,
-			VK_INDEX_TYPE_UINT32);
-		vkCmdBindDescriptorSets(commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			P1.pipelineLayout, 1, 1, &DS_Landscape3.descriptorSets[currentImage],
-			0, nullptr);
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(Landscape3.indices.size()), 1, 0, 0, 0);
-
-		//Land4
-		VkBuffer vertexBuffers5[] = { Landscape4.vertexBuffer };
-		VkDeviceSize offsets5[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers5, offsets5);
-		vkCmdBindIndexBuffer(commandBuffer, Landscape4.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-								P1.pipelineLayout, 1, 1, &DS_Landscape4.descriptorSets[currentImage],
-								0, nullptr);
-		vkCmdDrawIndexed(commandBuffer,	static_cast<uint32_t>(Landscape4.indices.size()), 1, 0, 0, 0);
 
 		//skybox
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, SkyboxPipeline.graphicsPipeline);
@@ -400,13 +349,14 @@ class MyProject : public BaseProject {
 
 		// rocket
 		static float rocketResizeFactor = 0.18;
-		static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor + 0.3 , 0);
+		//float startingY = Landscape.findClosestPoint(0, 0);
+		static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor + 0.3, 0);
 		static glm::vec3 destPoint = glm::vec3(0, 4.1085 * rocketResizeFactor, 0);
 
 		// rocket movement
 		glm::vec3 center = glm::vec3((destPoint.x + startPoint.x) / 2, std::max(startPoint.y, destPoint.y), (destPoint.z + startPoint.z) / 2);
 		float r = glm::sqrt(pow(destPoint.x - startPoint.x, 2) + pow(destPoint.z - startPoint.z, 2)) / 2;
-		std::cout << r << std::endl;
+		//std::cout << r << std::endl;
 
 		static glm::vec3 rocketMov = glm::vec3(0);
 		glm::mat4 rocketRot = glm::mat4(1);
@@ -492,7 +442,8 @@ class MyProject : public BaseProject {
 				glfwGetCursorPos(window, &xpos, &zpos);
 				destPoint.x = xpos / (scalingFactor / 2) - width / scalingFactor;
 				destPoint.z = zpos / (scalingFactor / 2) - height / scalingFactor;
-				//clipping y	
+				//clipping y
+				destPoint.y = 4.1085 * rocketResizeFactor + Landscape.findClosestPoint(destPoint.x, destPoint.z);
 			}
 			break;
 		case 2:
@@ -522,35 +473,14 @@ class MyProject : public BaseProject {
 		//Landscape positioning
 		glm::mat4 rot, trans, scale;
 		rot = rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		trans = translate(glm::mat4(1.0f), glm::vec3(20, 0, -27));
+		trans = translate(glm::mat4(1.0f), glm::vec3(0, -1.5, 0));
 		scale = glm::scale(glm::mat4(1), glm::vec3(3.25, 1, 3.25));
 		ubo.model = trans * scale;
 		vkMapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage], 0,
 			sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage]);
-		//L2
-		trans = translate(glm::mat4(1.0f), glm::vec3(-20, 0, -27));
-		ubo.model = trans * scale;
-		vkMapMemory(device, DS_Landscape2.uniformBuffersMemory[0][currentImage], 0,
-			sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS_Landscape2.uniformBuffersMemory[0][currentImage]);
-		//L3
-		trans = translate(glm::mat4(1.0f), glm::vec3(20, 0, 27));
-		ubo.model = trans * scale;
-		vkMapMemory(device, DS_Landscape3.uniformBuffersMemory[0][currentImage], 0,
-			sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS_Landscape3.uniformBuffersMemory[0][currentImage]);
-		//L4
-		trans = translate(glm::mat4(1.0f), glm::vec3(-20, 0, 27));
-		ubo.model = trans * scale;
-		vkMapMemory(device, DS_Landscape4.uniformBuffersMemory[0][currentImage], 0,
-			sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS_Landscape4.uniformBuffersMemory[0][currentImage]);
-
+		Landscape.fillVectorY(ubo.model);
 
 		//update skybox uniforms
 		ubo.model = gubo.proj * glm::mat4(glm::mat3(gubo.view));
