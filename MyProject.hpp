@@ -267,7 +267,6 @@ struct DescriptorSet {
 	void cleanup();
 };
 
-
 // MAIN ! 
 class BaseProject {
 	friend class Model;
@@ -317,9 +316,7 @@ protected:
 	
 	// Lesson 19
 	VkRenderPass renderPass;
-	
  	VkDescriptorPool descriptorPool;
-
 	const char *TextureFile[6] = {"sky/right.jpg", "sky/left.jpg", "sky/top.jpg", "sky/bottom.jpg", "sky/front.jpg", "sky/back.jpg"};
 
 
@@ -335,6 +332,7 @@ protected:
 	// L22.2 --- Frame buffers
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 	size_t currentFrame = 0;
+	bool framebufferResized = false;
 
 	// L22.3 --- Synchronization objects
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -349,7 +347,14 @@ protected:
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), nullptr, nullptr);
+		glfwSetWindowUserPointer(window, this);
+		glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     }
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+		auto app = reinterpret_cast<BaseProject*>(glfwGetWindowUserPointer(window));
+		app->framebufferResized = true;
+	}
 
 	virtual void localInit() = 0;
 	virtual void createDescriptorSetLayouts() = 0;
@@ -412,13 +417,11 @@ protected:
 		}
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-			createInfo.enabledLayerCount =
-				static_cast<uint32_t>(validationLayers.size());
+			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
 			
 			populateDebugMessengerCreateInfo(debugCreateInfo);
-			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)
-									&debugCreateInfo;
+			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
 		// For debugging [Lesson 22] - End
 		
 		VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -433,8 +436,7 @@ protected:
     std::vector<const char*> getRequiredExtensions() {
 		uint32_t glfwExtensionCount = 0;
 		const char** glfwExtensions;
-		glfwExtensions =
-			glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 		std::vector<const char*> extensions(glfwExtensions,
 			glfwExtensions + glfwExtensionCount);
@@ -449,8 +451,7 @@ protected:
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
 		std::vector<VkLayerProperties> availableLayers(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount,
-					availableLayers.data());
+		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
 		for (const char* layerName : validationLayers) {
 			bool layerFound = false;
@@ -474,8 +475,7 @@ protected:
     void populateDebugMessengerCreateInfo(
     		VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     	createInfo = {};
-		createInfo.sType =
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity =
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -511,8 +511,7 @@ protected:
 
 	// Lesson 13
     void createSurface() {
-    	if (glfwCreateWindowSurface(instance, window, nullptr, &surface)
-    			!= VK_SUCCESS) {
+    	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create window surface!");
 		}
     }
@@ -559,8 +558,7 @@ protected:
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 		
-		return indices.isComplete() && extensionsSupported && swapChainAdequate &&
-						supportedFeatures.samplerAnisotropy;
+		return indices.isComplete() && extensionsSupported && swapChainAdequate &&	supportedFeatures.samplerAnisotropy;
 	}
     
     // Lesson 13
@@ -568,12 +566,10 @@ protected:
 		QueueFamilyIndices indices;
 		
 		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-						nullptr);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,	nullptr);
 
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-								queueFamilies.data());
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,	queueFamilies.data());
 								
 		int i=0;
 		for (const auto& queueFamily : queueFamilies) {
@@ -582,8 +578,7 @@ protected:
 			}
 				
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface,
-												 &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
 			if (presentSupport) {
 			 	indices.presentFamily = i;
 			}
@@ -600,15 +595,12 @@ protected:
 	// Lesson 13
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
 		uint32_t extensionCount;
-		vkEnumerateDeviceExtensionProperties(device, nullptr,
-					&extensionCount, nullptr);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 					
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-		vkEnumerateDeviceExtensionProperties(device, nullptr,
-					&extensionCount, availableExtensions.data());
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 					
-		std::set<std::string> requiredExtensions(deviceExtensions.begin(),
-					deviceExtensions.end());
+		std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 					
 		for (const auto& extension : availableExtensions){
 			requiredExtensions.erase(extension.extensionName);
@@ -621,27 +613,22 @@ protected:
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 		SwapChainSupportDetails details;
 		
-		 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
-		 		&details.capabilities);
+		 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,	&details.capabilities);
 
 		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-				nullptr);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,	nullptr);
 				
 		if (formatCount != 0) {
 			details.formats.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface,
-					&formatCount, details.formats.data());
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
 		}
 		
 		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-			&presentModeCount, nullptr);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 		
 		if (presentModeCount != 0) {
 			details.presentModes.resize(presentModeCount);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
-					&presentModeCount, details.presentModes.data());
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
 		}
 		 
 		return details;
@@ -652,8 +639,7 @@ protected:
 		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 		
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies =
-				{indices.graphicsFamily.value(), indices.presentFamily.value()};
+		std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 		
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -672,17 +658,14 @@ protected:
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
-		createInfo.queueCreateInfoCount = 
-			static_cast<uint32_t>(queueCreateInfos.size());
+		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		
 		createInfo.pEnabledFeatures = &deviceFeatures;
-		createInfo.enabledExtensionCount =
-				static_cast<uint32_t>(deviceExtensions.size());
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-			createInfo.enabledLayerCount = 
-					static_cast<uint32_t>(validationLayers.size());
-			createInfo.ppEnabledLayerNames = validationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+		createInfo.ppEnabledLayerNames = validationLayers.data();
 		
 		VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 		
@@ -697,12 +680,9 @@ protected:
 	
 	// Lesson 14
 	void createSwapChain() {
-		SwapChainSupportDetails swapChainSupport =
-				querySwapChainSupport(physicalDevice);
-		VkSurfaceFormatKHR surfaceFormat =
-				chooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR presentMode =
-				chooseSwapPresentMode(swapChainSupport.presentModes);
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
+		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+		VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
 		VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 		
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -749,11 +729,64 @@ protected:
 		
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
 		swapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(device, swapChain, &imageCount,
-				swapChainImages.data());
+		vkGetSwapchainImagesKHR(device, swapChain, &imageCount,	swapChainImages.data());
 				
 		swapChainImageFormat = surfaceFormat.format;
 		swapChainExtent = extent;
+	}
+
+	void recreateSwapChain() {
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		while (width == 0 || height == 0) {
+			glfwGetFramebufferSize(window, &width, &height);
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(device);
+
+		cleanupSwapChain();
+
+		createSwapChain();
+		createImageViews();
+		createRenderPass();
+		createPipelines();
+		createDepthResources();
+		createFramebuffers();
+		//create the uniform buffers
+		createDescriptorPool();
+		//creation of the descriptor sets do also the relative uniform buffer
+		descriptorSetsRecreation();
+		createCommandBuffers();
+	}
+
+	void cleanupSwapChain() {
+		vkDestroyImageView(device, depthImageView, nullptr);
+		vkDestroyImage(device, depthImage, nullptr);
+		vkFreeMemory(device, depthImageMemory, nullptr);
+
+		for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+			vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+		}
+
+		vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+		//skybox pipeline cleanup
+		pipelineCleanup();
+
+		vkDestroyRenderPass(device, renderPass, nullptr);
+
+		for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+			vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+		}
+
+		vkDestroySwapchainKHR(device, swapChain, nullptr);
+
+		//destroy skybox descriptor sets
+		descriptorSetsCleanup();
+
+		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	}
 
 	// Lesson 14
@@ -915,18 +948,15 @@ protected:
 			};
 
 			VkFramebufferCreateInfo framebufferInfo{};
-			framebufferInfo.sType =
-				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = renderPass;
-			framebufferInfo.attachmentCount =
-							static_cast<uint32_t>(attachments.size());;
+			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
 			framebufferInfo.pAttachments = attachments.data();
 			framebufferInfo.width = swapChainExtent.width; 
 			framebufferInfo.height = swapChainExtent.height;
 			framebufferInfo.layers = 1;
 			
-			VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr,
-						&swapChainFramebuffers[i]);
+			VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
 			if (result != VK_SUCCESS) {
 			 	PrintVkError(result);
 				throw std::runtime_error("failed to create framebuffer!");
@@ -936,8 +966,7 @@ protected:
 
 	// Lesson 13
     void createCommandPool() {
-    	QueueFamilyIndices queueFamilyIndices = 
-    			findQueueFamilies(physicalDevice);
+    	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
     			
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1454,17 +1483,24 @@ protected:
     
     // Lesson 22.6
     void drawFrame() {
-		vkWaitForFences(device, 1, &inFlightFences[currentFrame],
-						VK_TRUE, UINT64_MAX);
+		vkWaitForFences(device, 1, &inFlightFences[currentFrame],VK_TRUE, UINT64_MAX);
 		
 		uint32_t imageIndex;
-		
-		VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX,
-				imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+		VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			recreateSwapChain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			throw std::runtime_error("failed to acquire swap chain image!");
+		}
+
+		//only reset fence if we're submitting work
+		//vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
 		if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-			vkWaitForFences(device, 1, &imagesInFlight[imageIndex],
-							VK_TRUE, UINT64_MAX);
+			vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
 		}
 		imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 		
@@ -1503,54 +1539,46 @@ protected:
 		
 		result = vkQueuePresentKHR(presentQueue, &presentInfo);
 
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+			framebufferResized = false;
+			recreateSwapChain();
+		}
+		else if (result != VK_SUCCESS) {
+			throw std::runtime_error("failed to present swap chain image!");
+		}
+
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
 	virtual void updateUniformBuffer(uint32_t currentImage) = 0;
 
-	virtual void localCleanup() = 0;
+	virtual void objectsCleanup() = 0;
+	virtual void pipelineCleanup() = 0;
+	virtual void descriptorSetsCleanup() = 0;
+	virtual void descriptorSetsRecreation() = 0;
 	
 	// All lessons
 	
     void cleanup() {
-		vkDestroyImageView(device, depthImageView, nullptr);
-		vkDestroyImage(device, depthImage, nullptr);
-		vkFreeMemory(device, depthImageMemory, nullptr);
+		cleanupSwapChain();
 
-		for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
-			vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
-		}
-		
-		vkFreeCommandBuffers(device, commandPool,
-				static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-
-		vkDestroyRenderPass(device, renderPass, nullptr);
-
-		for (size_t i = 0; i < swapChainImageViews.size(); i++){
-			vkDestroyImageView(device, swapChainImageViews[i], nullptr);
-		}
-		
-		vkDestroySwapchainKHR(device, swapChain, nullptr);
-		
-		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-    	
-    	
-		localCleanup();
+		//tecnically here I have to clear only models, texture, descriptor sets layouts others are done in the cleanupSwapChain()
+		objectsCleanup();
     	
     	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 			vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
 			vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
 			vkDestroyFence(device, inFlightFences[i], nullptr);
     	}
-    	
+
     	vkDestroyCommandPool(device, commandPool, nullptr);
-    	
- 		vkDestroyDevice(device, nullptr);
-		
+
+		vkDestroyDevice(device, nullptr);
+
 		DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
-		
+
 		vkDestroySurfaceKHR(instance, surface, nullptr);
-    	vkDestroyInstance(instance, nullptr);
+		vkDestroyInstance(instance, nullptr);
 
         glfwDestroyWindow(window);
 

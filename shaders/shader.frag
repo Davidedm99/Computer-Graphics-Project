@@ -25,5 +25,5 @@ void main() {
 	// Hemispheric ambient
 	vec3 ambient  = vec3(0.3f,0.3f, 0.3f) * diffColor;
 	
-	outColor = vec4(clamp(ambient + diffuse + specular, vec3(0.0f), vec3(1.0f)), 1.0f);
+	outColor = vec4(clamp(ambient + diffuse, vec3(0.0f), vec3(1.0f)), 1.0f);
 }
