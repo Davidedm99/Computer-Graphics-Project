@@ -299,7 +299,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos += yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 
-		if (CamPos.y <= 8 * rocketResizeFactor && !canStep(CamPos.x, CamPos.z)) {
+		if (!canStep(CamPos)) {
 			CamPos = oldCamPos;
 		}
 
@@ -311,12 +311,13 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 
 	}
 
-	bool canStep(float x, float z) {
-		float camDistance = ((x - startPoint.x) * (x - startPoint.x)) + ((z - startPoint.z) * (z - startPoint.z));
+	bool canStep(glm::vec3 Camera) {
+		float camDistance = ((Camera.x - startPoint.x) * (Camera.x - startPoint.x)) + ((Camera.z - startPoint.z) * (Camera.z - startPoint.z));
 		//check the distance of the cam from the rocket, if camera closer than a variable return false so there's no clipping
-		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) ) {
+		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) && Camera.y <= 2.3) {
 				return false;
 			}
+		//std:: cout << Camera.y << std::endl;
 		return true;
 	}
 

@@ -17,22 +17,22 @@ C:\Users\Davide\Desktop\working rocket\MyProject.hpp(1661,39): warning C4267: 'a
           ]
 C:\Users\Davide\Desktop\working rocket\MyProject.hpp(2011,48): warning C4267: '=': conversione da 'size_t' a 'uint32_t'. Possibile perdita di dati.
 C:\Users\Davide\Desktop\working rocket\MyProject.cpp(9,39): warning C4305: 'inizializzazione': troncamento da 'double' a 'float'
-C:\Users\Davide\Desktop\working rocket\MyProject.cpp(343,18): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
-C:\Users\Davide\Desktop\working rocket\MyProject.cpp(384,11): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
-C:\Users\Davide\Desktop\working rocket\MyProject.cpp(419,20): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
-C:\Users\Davide\Desktop\working rocket\MyProject.cpp(470,46): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
-          with
-          [
-              T=float
-          ]
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(344,18): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(385,11): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(420,20): warning C4244: 'inizializzazione': conversione da 'double' a 'float'. Possibile perdita di dati.
 C:\Users\Davide\Desktop\working rocket\MyProject.cpp(471,46): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
           with
           [
               T=float
           ]
-C:\Users\Davide\Desktop\working rocket\MyProject.cpp(473,47): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(472,46): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
           with
           [
               T=float
           ]
-LINK : fatal error LNK1168: impossibile aprire 'C:\Users\Davide\Desktop\working rocket\x64\Debug\working rocket.exe' per la scrittura
+C:\Users\Davide\Desktop\working rocket\MyProject.cpp(474,47): warning C4244: '=': conversione da 'double' a 'T'. Possibile perdita di dati.
+          with
+          [
+              T=float
+          ]
+  working rocket.vcxproj -> C:\Users\Davide\Desktop\working rocket\x64\Debug\working rocket.exe
