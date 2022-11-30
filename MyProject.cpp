@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+// This has been adapted from the Vulkan tutorial
+
+>>>>>>> 24c8cccc21a71bbcca2847449653382b1f925362
 #include "MyProject.hpp"
 #define GLM_FORCE_RADIANS
 #define FLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -6,8 +11,13 @@
 #include <math.h>
 
 float scalingFactor = 40.0f;
+<<<<<<< HEAD
 static float rocketResizeFactor = 0.18;
 static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor + 0.7, 0);
+=======
+
+// The uniform buffer object 
+>>>>>>> 24c8cccc21a71bbcca2847449653382b1f925362
 
 struct GlobalUniformBufferObject {
 	alignas(16) glm::mat4 view;
