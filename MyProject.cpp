@@ -291,7 +291,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos -= cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_C)) {
-			if (CamPos.y > 2) {
+			if (CamPos.y > 1.75) {
 				CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 			}
 		}
@@ -317,7 +317,6 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) && Camera.y <= 2.3) {
 				return false;
 			}
-		//std:: cout << Camera.y << std::endl;
 		return true;
 	}
 
