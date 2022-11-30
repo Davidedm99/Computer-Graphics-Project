@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-// This has been adapted from the Vulkan tutorial
-
->>>>>>> 24c8cccc21a71bbcca2847449653382b1f925362
 #include "MyProject.hpp"
 #define GLM_FORCE_RADIANS
 #define FLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -11,13 +6,8 @@
 #include <math.h>
 
 float scalingFactor = 40.0f;
-<<<<<<< HEAD
 static float rocketResizeFactor = 0.18;
 static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor + 0.7, 0);
-=======
-
-// The uniform buffer object 
->>>>>>> 24c8cccc21a71bbcca2847449653382b1f925362
 
 struct GlobalUniformBufferObject {
 	alignas(16) glm::mat4 view;
@@ -301,7 +291,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos -= cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_C)) {
-			if (CamPos.y > 1.75) {
+			if (CamPos.y > 2) {
 				CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 			}
 		}
@@ -309,7 +299,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos += yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 
-		if (!canStep(CamPos)) {
+		if (CamPos.y <= 8 * rocketResizeFactor && !canStep(CamPos.x, CamPos.z)) {
 			CamPos = oldCamPos;
 		}
 
@@ -321,10 +311,10 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 
 	}
 
-	bool canStep(glm::vec3 Camera) {
-		float camDistance = ((Camera.x - startPoint.x) * (Camera.x - startPoint.x)) + ((Camera.z - startPoint.z) * (Camera.z - startPoint.z));
+	bool canStep(float x, float z) {
+		float camDistance = ((x - startPoint.x) * (x - startPoint.x)) + ((z - startPoint.z) * (z - startPoint.z));
 		//check the distance of the cam from the rocket, if camera closer than a variable return false so there's no clipping
-		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) && Camera.y <= 2.3) {
+		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) ) {
 				return false;
 			}
 		return true;
