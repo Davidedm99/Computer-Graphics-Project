@@ -1,5 +1,3 @@
-// This has been adapted from the Vulkan tutorial
-
 #include "MyProject.hpp"
 #define GLM_FORCE_RADIANS
 #define FLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -8,8 +6,8 @@
 #include <math.h>
 
 float scalingFactor = 40.0f;
-
-// The uniform buffer object 
+static float rocketResizeFactor = 0.18;
+static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor + 0.7, 0);
 
 struct GlobalUniformBufferObject {
 	alignas(16) glm::mat4 view;
@@ -22,17 +20,17 @@ struct UniformBufferObject {
 };
 
 
-// MAIN ! 
 class MyProject : public BaseProject {
 	protected:
-	// Here you list all the Vulkan objects you need:
 	
 	// Descriptor Layouts [what will be passed to the shaders]
 	DescriptorSetLayout DSLGlobal;
 	DescriptorSetLayout DSLObject;
+	DescriptorSetLayout DSLSkybox;
 
 	// Pipelines [Shader couples]
 	Pipeline P1;
+	Pipeline SkyboxPipeline;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	Model Rocket_body;
@@ -42,6 +40,10 @@ class MyProject : public BaseProject {
 	Model Landscape;
 	Texture Landscape_texture;
 	DescriptorSet DS_Landscape;
+	
+	Model Skybox;
+	Texture Skybox_texture;
+	DescriptorSet DS_Skybox;
 
 	DescriptorSet DS_Global;
 	
@@ -51,35 +53,48 @@ class MyProject : public BaseProject {
 		windowWidth = 800;
 		windowHeight = 600;
 		windowTitle = "Rocket Simulator";
-		initialBackgroundColor = {0.0f, 1.0f, 1.0f, 1.0f};
+		initialBackgroundColor = {1.0f, 0.65f, 0.4f, 1.0f};
 		
 		// Descriptor pool sizes
-		uniformBlocksInPool = 3;
-		texturesInPool = 2;
-		setsInPool = 3;
+		uniformBlocksInPool = 8;
+		texturesInPool = 8;
+		setsInPool = 8;
+	}
+
+	void createDescriptorSetLayouts() {
+		// Descriptor Layouts [what will be passed to the shaders]
+		DSLGlobal.init(this, {
+			// this array contains the binding:
+			// first  element : the binding number
+			// second element : the time of element (buffer or texture)
+			// third  element : the pipeline stage where it will be used
+			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
+			});
+
+		DSLObject.init(this, {
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
+					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
+			});
+
+		DSLSkybox.init(this, {
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
+					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
+			});
+	}
+
+	void createPipelines() {
+		// Pipelines [Shader couples]
+		// The last array, is a vector of pointer to the layouts of the sets that will
+		// be used in this pipeline. The first element will be set 0, and so on..
+		P1.init(this, "shaders/vert.spv", "shaders/frag.spv", { &DSLGlobal, &DSLObject });
+		//this bool is used to allow the usa of the same function but with some different parameters
+		isSkybox = true;
+		SkyboxPipeline.init(this, "shaders/SkyBoxVert.spv", "shaders/SkyBoxFrag.spv", { &DSLSkybox });
+		isSkybox = false;
 	}
 	
 	// Here you load and setup all your Vulkan objects
 	void localInit() {
-		// Descriptor Layouts [what will be passed to the shaders]
-		DSLGlobal.init(this, {
-					// this array contains the binding:
-					// first  element : the binding number
-					// second element : the time of element (buffer or texture)
-					// third  element : the pipeline stage where it will be used
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
-					});
-
-		DSLObject.init(this, {
-			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
-			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
-			});
-
-		// Pipelines [Shader couples]
-		// The last array, is a vector of pointer to the layouts of the sets that will
-		// be used in this pipeline. The first element will be set 0, and so on..
-		P1.init(this, "shaders/vert.spv", "shaders/frag.spv", {&DSLGlobal, &DSLObject});
-
 		// Models, textures and Descriptors (values assigned to the uniforms)
 		Rocket_body.init(this, "models/R27-Ready.obj");
 		Rocket_texture.init(this, "textures/R27 Texture.png");
@@ -94,8 +109,8 @@ class MyProject : public BaseProject {
 					{1, TEXTURE, 0, &Rocket_texture}
 				});
 
-		Landscape.init(this, "models/mount.obj");
-		Landscape_texture.init(this, "textures/ground.jpg");
+		Landscape.init(this, "models/desert2.obj");
+		Landscape_texture.init(this, "textures/sand.png");
 		DS_Landscape.init(this, &DSLObject, {
 					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 					{1, TEXTURE, 0, &Landscape_texture}
@@ -104,28 +119,69 @@ class MyProject : public BaseProject {
 		DS_Global.init(this, &DSLGlobal, {
 					{0, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
 				});
+
+		//skybox model texture and DS
+		isSkybox = true;
+		Skybox.init(this, "models/SkyBoxCube.obj");
+		Skybox_texture.init(this, "Skybox");	//the string is actually useless since I have an array of strings with all the 6 faces
+		DS_Skybox.init(this, &DSLObject, {
+					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+					{1, TEXTURE, 0, &Skybox_texture}
+				});
+		isSkybox = false;
 	}
 
-	// Here you destroy all the objects you created!		
-	void localCleanup() {
-		DS_Rocket.cleanup();
+	//useful to separate the recreation of the descriptor sets when the window size is modified
+	void descriptorSetsRecreation() {
+		DS_Rocket.init(this, &DSLObject, {
+						{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+						{1, TEXTURE, 0, &Rocket_texture}
+			});
+
+		DS_Landscape.init(this, &DSLObject, {
+					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+					{1, TEXTURE, 0, &Landscape_texture}
+			});
+
+		DS_Global.init(this, &DSLGlobal, {
+					{0, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
+			});
+
+		DS_Skybox.init(this, &DSLObject, {
+					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+					{1, TEXTURE, 0, &Skybox_texture}
+			});
+	}
+
+	//cleanup divided so that I can manage better what to clean in case of a window resize, since those objects can remain the same while other must be recreated
+	void objectsCleanup() {
 		Rocket_texture.cleanup();
 		Rocket_body.cleanup();
 
-		DS_Landscape.cleanup();
 		Landscape_texture.cleanup();
 		Landscape.cleanup();
 
-		DS_Global.cleanup();
+		Skybox_texture.cleanup();
+		Skybox.cleanup();
 
-		P1.cleanup();
+		DSLSkybox.cleanup();
 		DSLGlobal.cleanup();
 		DSLObject.cleanup();
 	}
+
+	void pipelineCleanup() {
+		SkyboxPipeline.cleanup();
+		P1.cleanup();
+	}
+
+	void descriptorSetsCleanup() {
+		DS_Rocket.cleanup();
+		DS_Landscape.cleanup();
+		DS_Global.cleanup();
+		DS_Skybox.cleanup();
+	}
 	
-	// Here it is the creation of the command buffer:
-	// You send to the GPU all the objects you want to draw,
-	// with their buffers and textures
+	// Here it is the creation of the command buffer: send to the GPU all the objects you want to draw, with their buffers and textures
 	void populateCommandBuffer(VkCommandBuffer commandBuffer, int currentImage) {
 				
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -159,19 +215,30 @@ class MyProject : public BaseProject {
 		VkDeviceSize offsets2[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers2, offsets2);
 		vkCmdBindIndexBuffer(commandBuffer, Landscape.indexBuffer, 0,
-			VK_INDEX_TYPE_UINT32);
-		vkCmdBindDescriptorSets(commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			P1.pipelineLayout, 1, 1, &DS_Landscape.descriptorSets[currentImage],
-			0, nullptr);
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
+VK_INDEX_TYPE_UINT32);
+vkCmdBindDescriptorSets(commandBuffer,
+	VK_PIPELINE_BIND_POINT_GRAPHICS,
+	P1.pipelineLayout, 1, 1, &DS_Landscape.descriptorSets[currentImage],
+	0, nullptr);
+vkCmdDrawIndexed(commandBuffer,
+	static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
+
+//skybox
+vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, SkyboxPipeline.graphicsPipeline);
+VkBuffer vertexBuffers6[] = { Skybox.vertexBuffer };
+VkDeviceSize offsets6[] = { 0 };
+vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers6, offsets6);
+vkCmdBindIndexBuffer(commandBuffer, Skybox.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+	SkyboxPipeline.pipelineLayout, 0, 1, &DS_Skybox.descriptorSets[currentImage],
+	0, nullptr);
+vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1, 0, 0, 0);
 	}
 
-	void firstPersonCamera(GlobalUniformBufferObject *gubo, UniformBufferObject *ubo, float lastTime, float deltaT, int width, int height) {
+	void firstPersonCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo, float lastTime, float deltaT, int width, int height) {
+		//save pos when switch cam and then do difference between the movement of first and second camera
 		static glm::mat3 CamDir = glm::mat3(glm::rotate(glm::mat4(1), -glm::radians(30.0f), glm::vec3(1, 0, 0)));
 		static glm::vec3 CamPos = glm::vec3(0.0f, 9.0f, 9.0f);
-
 
 		// rotation through mouse
 		float cameraRotSpeed = 0.003f;
@@ -191,9 +258,12 @@ class MyProject : public BaseProject {
 		}
 
 		glm::vec2 mouseMovement = glm::vec2(xpos - oldxpos, ypos - oldypos);
+		//if (mouseMovement.x != 0) std::cout << mouseMovement.x << std::endl;
 
-		CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.x * cameraRotSpeed, glm::vec3(0, 1, 0))) * glm::mat4(CamDir));
-		CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.y * cameraRotSpeed, glm::vec3(CamDir[0]))) * glm::mat4(CamDir));
+		if (sqrt(mouseMovement.x * mouseMovement.x + mouseMovement.y * mouseMovement.y) < 150) {
+			CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.x * cameraRotSpeed, glm::vec3(0, 1, 0))) * glm::mat4(CamDir));
+			CamDir = glm::mat3((glm::rotate(glm::mat4(1.0f), -mouseMovement.y * cameraRotSpeed, glm::vec3(CamDir[0]))) * glm::mat4(CamDir));
+		}
 
 		oldxpos = xpos;
 		oldypos = ypos;
@@ -202,6 +272,8 @@ class MyProject : public BaseProject {
 		static glm::vec3 cameraPos = glm::vec3(0, 0, 0);
 		float cameraSpeed = 0.9f; // units/second
 		float yCameraSpeed = 2.0f;
+		glm::vec3 oldCamPos = CamPos;
+
 		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
 			cameraSpeed *= 3.5;
 			yCameraSpeed *= 3.5;
@@ -219,18 +291,33 @@ class MyProject : public BaseProject {
 			CamPos -= cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_C)) {
-			CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
+			if (CamPos.y > 2) {
+				CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
+			}
 		}
 		if (glfwGetKey(window, GLFW_KEY_SPACE)) {
 			CamPos += yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 
+		if (CamPos.y <= 8 * rocketResizeFactor && !canStep(CamPos.x, CamPos.z)) {
+			CamPos = oldCamPos;
+		}
 
 		gubo->view = glm::translate(glm::transpose(glm::mat4(CamDir)), -CamPos);
 		gubo->proj = glm::perspective(glm::radians(45.0f),
 			width / (float)height,
 			0.1f, 40.0f);
 		gubo->proj[1][1] *= -1;
+
+	}
+
+	bool canStep(float x, float z) {
+		float camDistance = ((x - startPoint.x) * (x - startPoint.x)) + ((z - startPoint.z) * (z - startPoint.z));
+		//check the distance of the cam from the rocket, if camera closer than a variable return false so there's no clipping
+		if (camDistance <= ( rocketResizeFactor * rocketResizeFactor) ) {
+				return false;
+			}
+		return true;
 	}
 
 	void topViewCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo, glm::vec3 *destPoint, int width, int height) {
@@ -250,6 +337,8 @@ class MyProject : public BaseProject {
 	void rocketPOVCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo, glm::vec3 rocketPos, glm::mat4 rocketRot, glm::vec3 trajDir, double beta, float ellipticTrajectoryFactor, int width, int height) {
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		
+		//set the destination point first at random else 0
+
 		// position of the camera relative to the rocket center
 		float rotAngle = atan(ellipticTrajectoryFactor * cos(beta) / sin(beta)) + M_PI / 2;
 		glm::vec3 camRelativePos = glm::vec3(-trajDir.x * cos(rotAngle), sin(rotAngle), -trajDir.z * cos(rotAngle)) * 0.3f;		
@@ -278,7 +367,6 @@ class MyProject : public BaseProject {
 		float deltaT = time - lastTime;
 		lastTime = time;
 
-
 		GlobalUniformBufferObject gubo{};
 		UniformBufferObject ubo{};
 		void* data;
@@ -288,14 +376,13 @@ class MyProject : public BaseProject {
 		glfwGetWindowSize(window, &width, &height);
 
 		// rocket
-		static float rocketResizeFactor = 0.18;
-		static glm::vec3 startPoint = glm::vec3(0, 4.1085 * rocketResizeFactor, 0);
-		static glm::vec3 destPoint = glm::vec3(0, 4.1085 * rocketResizeFactor, 0);
+		//start point temporarely put in the global variables so i can access it from every method even in the hpp
+		static glm::vec3 destPoint = glm::vec3(5, 4.1085 * rocketResizeFactor, 5);
 
 		// rocket movement
 		glm::vec3 center = glm::vec3((destPoint.x + startPoint.x) / 2, std::max(startPoint.y, destPoint.y), (destPoint.z + startPoint.z) / 2);
 		float r = glm::sqrt(pow(destPoint.x - startPoint.x, 2) + pow(destPoint.z - startPoint.z, 2)) / 2;
-		std::cout << r << std::endl;
+		//std::cout << r << std::endl;
 
 		static glm::vec3 rocketMov = glm::vec3(0);
 		glm::mat4 rocketRot = glm::mat4(1);
@@ -341,7 +428,8 @@ class MyProject : public BaseProject {
 				rocketRot = glm::mat4(1);
 				beta = M_PI;
 				startPoint = destPoint;
-
+				//change temporarely the destpoint in order not to get a blank visual during the RocketPOV 
+				destPoint = glm::vec3(0, 4.1085 * rocketResizeFactor, 0);
 			}
 			if (currentSpeed < maxSpeed) {
 				currentSpeed += acceleration * deltaT;
@@ -381,6 +469,8 @@ class MyProject : public BaseProject {
 				glfwGetCursorPos(window, &xpos, &zpos);
 				destPoint.x = xpos / (scalingFactor / 2) - width / scalingFactor;
 				destPoint.z = zpos / (scalingFactor / 2) - height / scalingFactor;
+				//clipping y
+				destPoint.y = 4.1085 * rocketResizeFactor + Landscape.findClosestPoint(destPoint.x, destPoint.z);
 			}
 			break;
 		case 2:
@@ -396,7 +486,6 @@ class MyProject : public BaseProject {
 		vkUnmapMemory(device, DS_Global.uniformBuffersMemory[0][currentImage]);
 
 		// Rocket body
-		// rocket center position (0,0,4.1085 * rocketResizeFactor)
 		ubo.model = glm::translate(glm::mat4(1), rocketMov)
 			* glm::translate(glm::mat4(1), startPoint)
 			* rocketRot
@@ -409,14 +498,22 @@ class MyProject : public BaseProject {
 
 		//Landscape positioning
 		glm::mat4 rot, trans, scale;
-		rot = rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		trans = translate(glm::mat4(1.0f), glm::vec3(-3, 0, -2));
-		scale = glm::scale(glm::mat4(1), glm::vec3(3, 1, 3));
+		rot = rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		trans = translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+		scale = glm::scale(glm::mat4(1), glm::vec3(6.5, 1, 6.5));
 		ubo.model = trans * scale;
 		vkMapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage], 0,
 			sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, DS_Landscape.uniformBuffersMemory[0][currentImage]);
+		Landscape.fillVectorY(ubo.model);
+
+		//update skybox uniforms
+		ubo.model = gubo.proj * glm::mat4(glm::mat3(gubo.view));
+		vkMapMemory(device, DS_Skybox.uniformBuffersMemory[0][currentImage], 0,
+			sizeof(ubo), 0, &data);
+		memcpy(data, &ubo, sizeof(ubo));
+		vkUnmapMemory(device, DS_Skybox.uniformBuffersMemory[0][currentImage]);
 	}
 };
 
