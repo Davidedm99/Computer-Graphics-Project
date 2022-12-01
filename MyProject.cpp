@@ -217,11 +217,11 @@ class MyProject : public BaseProject {
 		vkCmdBindIndexBuffer(commandBuffer, Landscape.indexBuffer, 0,
 VK_INDEX_TYPE_UINT32);
 vkCmdBindDescriptorSets(commandBuffer,
-	VK_PIPELINE_BIND_POINT_GRAPHICS,
-	P1.pipelineLayout, 1, 1, &DS_Landscape.descriptorSets[currentImage],
-	0, nullptr);
+VK_PIPELINE_BIND_POINT_GRAPHICS,
+P1.pipelineLayout, 1, 1, &DS_Landscape.descriptorSets[currentImage],
+0, nullptr);
 vkCmdDrawIndexed(commandBuffer,
-	static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
+static_cast<uint32_t>(Landscape.indices.size()), 1, 0, 0, 0);
 
 //skybox
 vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, SkyboxPipeline.graphicsPipeline);
@@ -230,10 +230,10 @@ VkDeviceSize offsets6[] = { 0 };
 vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers6, offsets6);
 vkCmdBindIndexBuffer(commandBuffer, Skybox.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-	SkyboxPipeline.pipelineLayout, 0, 1, &DS_Skybox.descriptorSets[currentImage],
-	0, nullptr);
+SkyboxPipeline.pipelineLayout, 0, 1, &DS_Skybox.descriptorSets[currentImage],
+0, nullptr);
 vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1, 0, 0, 0);
-	}
+}
 
 	void firstPersonCamera(GlobalUniformBufferObject* gubo, UniformBufferObject* ubo, float lastTime, float deltaT, int width, int height) {
 		//save pos when switch cam and then do difference between the movement of first and second camera
@@ -272,6 +272,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 		static glm::vec3 cameraPos = glm::vec3(0, 0, 0);
 		float cameraSpeed = 0.9f; // units/second
 		float yCameraSpeed = 2.0f;
+		float rocketHeight = rocketResizeFactor * 13;
 		glm::vec3 oldCamPos = CamPos;
 
 		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
@@ -291,7 +292,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos -= cameraSpeed * deltaT * glm::vec3(glm::cross(CamDir[0], glm::vec3(0, 1, 0)));
 		}
 		if (glfwGetKey(window, GLFW_KEY_C)) {
-			if (CamPos.y > 2) {
+			if (CamPos.y > 1) {
 				CamPos -= yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 			}
 		}
@@ -299,7 +300,7 @@ vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Skybox.indices.size()), 1,
 			CamPos += yCameraSpeed * deltaT * glm::vec3(0, 1, 0);
 		}
 
-		if (CamPos.y <= 8 * rocketResizeFactor && !canStep(CamPos.x, CamPos.z)) {
+		if (CamPos.y <= rocketHeight && !canStep(CamPos.x, CamPos.z)) {
 			CamPos = oldCamPos;
 		}
 
